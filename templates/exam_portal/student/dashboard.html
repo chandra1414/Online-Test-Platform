@@ -1,0 +1,274 @@
+{% extends 'exam_portal/base.html' %}
+{% load dict_tags %}
+
+{% block title %}Student Dashboard - Online Coding Test Platform{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Top Welcome Banner -->
+    <div class="card card-custom p-4 mb-4 border-0 shadow-sm" style="background: linear-gradient(135deg, #1e3a8a, #3b82f6); color: white;">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <span class="badge bg-white text-primary mb-2 px-3 py-1 fw-bold">Student Portal</span>
+                <h2 class="fw-bold mb-1">Welcome, {{ student.user.get_full_name|default:student.user.username }}!</h2>
+                <p class="mb-0 text-white-50">
+                    <i class="fa-solid fa-id-card me-1"></i> Roll No: <strong>{{ student.roll_number }}</strong> &nbsp;|&nbsp;
+                    <i class="fa-solid fa-building-columns me-1"></i> {{ student.college }} &bull; {{ student.department }}
+                </p>
+            </div>
+            <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                <a href="{% url 'leaderboard' %}" class="btn btn-warning fw-bold px-3 py-2 shadow-sm">
+                    <i class="fa-solid fa-trophy me-1"></i> View Leaderboard
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card card-custom p-3 border-start border-primary border-4">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="text-muted small fw-semibold text-uppercase">Tests Completed</span>
+                        <h3 class="fw-bold text-dark mt-1 mb-0">{{ total_tests_taken }}</h3>
+                    </div>
+                    <div class="rounded-circle bg-primary-subtle text-primary p-3">
+                        <i class="fa-solid fa-file-circle-check fs-4"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card card-custom p-3 border-start border-success border-4">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="text-muted small fw-semibold text-uppercase">Average Score</span>
+                        <h3 class="fw-bold text-dark mt-1 mb-0">{{ avg_score }}%</h3>
+                    </div>
+                    <div class="rounded-circle bg-success-subtle text-success p-3">
+                        <i class="fa-solid fa-chart-line fs-4"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card card-custom p-3 border-start border-info border-4">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="text-muted small fw-semibold text-uppercase">Tests Cleared</span>
+                        <h3 class="fw-bold text-dark mt-1 mb-0">{{ passed_count }}</h3>
+                    </div>
+                    <div class="rounded-circle bg-info-subtle text-info p-3">
+                        <i class="fa-solid fa-award fs-4"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Performance Analytics Chart (if student has taken tests) -->
+    {% if total_tests_taken > 0 %}
+    <div class="card card-custom p-4 mb-4">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+            <h5 class="fw-bold text-dark mb-0">
+                <i class="fa-solid fa-chart-area text-primary me-2"></i> Performance Analytics
+            </h5>
+            <span class="badge bg-light text-muted border">Score Progression (%)</span>
+        </div>
+        <div style="height: 220px;">
+            <canvas id="performanceChart"></canvas>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Available Tests Section -->
+    <div class="card card-custom p-4 mb-4">
+        <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-3">
+            <div>
+                <h5 class="fw-bold text-dark mb-1">
+                    <i class="fa-solid fa-laptop-code text-primary me-2"></i> Available Online Tests
+                </h5>
+                <p class="text-muted small mb-0">Timed Python MCQ & algorithmic coding challenges</p>
+            </div>
+            <span class="badge bg-primary-subtle text-primary fw-semibold">{{ available_tests|length }} active</span>
+        </div>
+
+        {% if available_tests %}
+        <div class="row g-3">
+            {% for test in available_tests %}
+            {% with status_info=test_status_map|dict_lookup:test.id %}
+            <div class="col-lg-6">
+                <div class="card h-100 border p-3 rounded-3 shadow-none bg-light-subtle">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h6 class="fw-bold text-dark mb-0 fs-5">{{ test.title }}</h6>
+                        {% if status_info.in_progress %}
+                            <span class="badge bg-warning text-dark"><i class="fa-solid fa-spinner fa-spin me-1"></i> In Progress</span>
+                        {% elif status_info.has_completed %}
+                            <span class="badge bg-success"><i class="fa-solid fa-check-circle me-1"></i> Completed</span>
+                        {% else %}
+                            <span class="badge bg-primary">Ready to Take</span>
+                        {% endif %}
+                    </div>
+
+                    <p class="text-muted small mb-3">{{ test.description|truncatewords:20 }}</p>
+
+                    <div class="d-flex flex-wrap gap-2 mb-3">
+                        <span class="badge bg-white border text-secondary">
+                            <i class="fa-regular fa-clock me-1 text-primary"></i> {{ test.duration_minutes }} Mins
+                        </span>
+                        <span class="badge bg-white border text-secondary">
+                            <i class="fa-solid fa-bullseye me-1 text-danger"></i> {{ test.total_marks }} Marks (Pass: {{ test.pass_marks }})
+                        </span>
+                        <span class="badge bg-white border text-secondary">
+                            <i class="fa-solid fa-list-ol me-1 text-info"></i> {{ test.mcq_count }} MCQs
+                        </span>
+                        <span class="badge bg-white border text-secondary">
+                            <i class="fa-solid fa-code me-1 text-success"></i> {{ test.coding_count }} Coding
+                        </span>
+                        {% if test.negative_marking %}
+                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
+                            <i class="fa-solid fa-circle-minus me-1"></i> -{{ test.negative_mark_value }} Negative Marking
+                        </span>
+                        {% endif %}
+                    </div>
+
+                    <div class="mt-auto pt-2 border-top d-flex justify-content-between align-items-center">
+                        {% if status_info.has_completed %}
+                            <div>
+                                <small class="text-muted">Best Score:</small>
+                                <span class="fw-bold text-dark">{{ status_info.best_score }} / {{ test.total_marks }}</span>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <a href="{% url 'test_history' %}" class="btn btn-outline-secondary btn-sm">
+                                    <i class="fa-solid fa-eye me-1"></i> View Result
+                                </a>
+                                {% if test.allow_multiple_attempts %}
+                                <a href="{% url 'test_instruction' test.id %}" class="btn btn-primary-custom btn-sm">
+                                    <i class="fa-solid fa-rotate-right me-1"></i> Retake
+                                </a>
+                                {% endif %}
+                            </div>
+                        {% elif status_info.in_progress %}
+                            <span class="text-warning small fw-bold">Test currently active</span>
+                            <a href="{% url 'take_test' status_info.in_progress.id %}" class="btn btn-warning btn-sm fw-bold">
+                                <i class="fa-solid fa-play me-1"></i> Resume Test
+                            </a>
+                        {% else %}
+                            <span class="text-muted small">Not attempted yet</span>
+                            <a href="{% url 'test_instruction' test.id %}" class="btn btn-primary-custom btn-sm">
+                                <i class="fa-solid fa-arrow-right me-1"></i> Instructions & Start
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endwith %}
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-5 text-muted">
+            <i class="fa-solid fa-folder-open fs-1 mb-2"></i>
+            <p>No tests are currently active. Please check back soon!</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Recent Attempts Section -->
+    {% if recent_attempts %}
+    <div class="card card-custom p-4">
+        <h5 class="fw-bold text-dark mb-3 border-bottom pb-2">
+            <i class="fa-solid fa-clock-rotate-left text-primary me-2"></i> Your Recent Submissions
+        </h5>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Test Title</th>
+                        <th>Date & Time</th>
+                        <th>Score</th>
+                        <th>Percentage</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for att in recent_attempts %}
+                    <tr>
+                        <td class="fw-semibold text-dark">{{ att.test.title }}</td>
+                        <td class="text-muted small">{{ att.completed_at|date:"M d, Y h:i A"|default:att.started_at|date:"M d, Y h:i A" }}</td>
+                        <td><span class="fw-bold">{{ att.score }}</span> / {{ att.total_possible }}</td>
+                        <td>
+                            <span class="fw-semibold">{{ att.percentage }}%</span>
+                        </td>
+                        <td>
+                            {% if att.is_passed %}
+                            <span class="badge bg-success-subtle text-success"><i class="fa-solid fa-check me-1"></i> Passed</span>
+                            {% else %}
+                            <span class="badge bg-danger-subtle text-danger"><i class="fa-solid fa-xmark me-1"></i> Failed</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <a href="{% url 'test_result' att.id %}" class="btn btn-sm btn-outline-primary me-1">
+                                <i class="fa-solid fa-file-lines me-1"></i> Scorecard
+                            </a>
+                            {% if att.is_passed %}
+                            <a href="{% url 'download_certificate' att.id %}" class="btn btn-sm btn-success">
+                                <i class="fa-solid fa-certificate me-1"></i> Certificate
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    {% if total_tests_taken > 0 %}
+    const labels = {{ chart_labels|safe }};
+    const scores = {{ chart_scores|safe }};
+
+    const ctx = document.getElementById('performanceChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Score (%)',
+                data: scores,
+                borderColor: '#2563eb',
+                backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.3,
+                pointBackgroundColor: '#2563eb',
+                pointRadius: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    ticks: { callback: function(value) { return value + '%'; } }
+                }
+            },
+            plugins: {
+                legend: { display: false }
+            }
+        }
+    });
+    {% endif %}
+</script>
+{% endblock %}

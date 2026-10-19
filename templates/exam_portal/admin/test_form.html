@@ -1,0 +1,107 @@
+{% extends 'exam_portal/base.html' %}
+
+{% block title %}{{ title }} - Admin Portal{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card card-custom p-4 shadow-sm">
+                <div class="d-flex justify-content-between align-items-center border-bottom pb-3 mb-4">
+                    <h4 class="fw-bold text-dark mb-0">
+                        <i class="fa-solid fa-pen-nib text-primary me-2"></i> {{ title }}
+                    </h4>
+                    <a href="{% url 'admin_tests_list' %}" class="btn btn-outline-secondary btn-sm">
+                        <i class="fa-solid fa-arrow-left me-1"></i> Back to Tests
+                    </a>
+                </div>
+
+                <form method="post" novalidate>
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Test Title <span class="text-danger">*</span></label>
+                        {{ form.title }}
+                        {% if form.title.errors %}<div class="text-danger small mt-1">{{ form.title.errors.0 }}</div>{% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Test Description & Instructions</label>
+                        {{ form.description }}
+                        {% if form.description.errors %}<div class="text-danger small mt-1">{{ form.description.errors.0 }}</div>{% endif %}
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Duration (Minutes) <span class="text-danger">*</span></label>
+                            {{ form.duration_minutes }}
+                            {% if form.duration_minutes.errors %}<div class="text-danger small mt-1">{{ form.duration_minutes.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Total Marks <span class="text-danger">*</span></label>
+                            {{ form.total_marks }}
+                            {% if form.total_marks.errors %}<div class="text-danger small mt-1">{{ form.total_marks.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Passing Marks <span class="text-danger">*</span></label>
+                            {{ form.pass_marks }}
+                            {% if form.pass_marks.errors %}<div class="text-danger small mt-1">{{ form.pass_marks.errors.0 }}</div>{% endif %}
+                        </div>
+                    </div>
+
+                    <h6 class="fw-bold text-primary text-uppercase small mt-4 mb-3 border-bottom pb-2">
+                        <i class="fa-solid fa-sliders me-1"></i> Exam Rules & Advanced Features
+                    </h6>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <div class="form-check form-switch mb-2">
+                                {{ form.negative_marking }}
+                                <label class="form-check-label fw-semibold" for="{{ form.negative_marking.id_for_label }}">
+                                    Enable Negative Marking
+                                </label>
+                            </div>
+                            <small class="text-muted d-block mb-2">Deducts points for wrong MCQ selections.</small>
+                            <label class="form-label small fw-semibold text-secondary">Negative Mark Penalty per Question:</label>
+                            {{ form.negative_mark_value }}
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="form-check form-switch mb-3">
+                                {{ form.randomize_questions }}
+                                <label class="form-check-label fw-semibold" for="{{ form.randomize_questions.id_for_label }}">
+                                    Randomize Questions
+                                </label>
+                                <small class="text-muted d-block">Shuffles question sequence differently for each student.</small>
+                            </div>
+
+                            <div class="form-check form-switch mb-3">
+                                {{ form.allow_multiple_attempts }}
+                                <label class="form-check-label fw-semibold" for="{{ form.allow_multiple_attempts.id_for_label }}">
+                                    Allow Multiple Submissions
+                                </label>
+                                <small class="text-muted d-block">Uncheck to enforce single-attempt policy.</small>
+                            </div>
+
+                            <div class="form-check form-switch">
+                                {{ form.is_active }}
+                                <label class="form-check-label fw-semibold" for="{{ form.is_active.id_for_label }}">
+                                    Published / Active
+                                </label>
+                                <small class="text-muted d-block">Make test immediately accessible to students.</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 border-top pt-3">
+                        <a href="{% url 'admin_tests_list' %}" class="btn btn-outline-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary-custom px-4">
+                            <i class="fa-solid fa-floppy-disk me-1"></i> Save Test Configuration
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

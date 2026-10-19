@@ -1,0 +1,89 @@
+{% extends 'exam_portal/base.html' %}
+{% load dict_tags %}
+
+{% block title %}Student Test Submissions & Scores - Admin Portal{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <h3 class="fw-bold text-dark mb-1">
+                <i class="fa-solid fa-chart-simple text-primary me-2"></i> Student Submissions & Scores
+            </h3>
+            <p class="text-muted small mb-0">Complete evaluation logs, accuracy percentages, and scorecard inspection</p>
+        </div>
+        <a href="{% url 'admin_dashboard' %}" class="btn btn-outline-secondary">
+            <i class="fa-solid fa-arrow-left me-1"></i> Dashboard
+        </a>
+    </div>
+
+    <div class="card card-custom p-4 shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Student Name & Roll No</th>
+                        <th>Test Title</th>
+                        <th>Date & Time</th>
+                        <th>Duration</th>
+                        <th>Marks Obtained</th>
+                        <th>Accuracy</th>
+                        <th>Verdict</th>
+                        <th class="text-end">Scorecard</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for att in attempts %}
+                    <tr>
+                        <td>
+                            <strong class="text-dark d-block">{{ att.student.user.get_full_name|default:att.student.user.username }}</strong>
+                            <small class="text-muted">{{ att.student.roll_number }} &bull; {{ att.student.college }}</small>
+                        </td>
+                        <td>
+                            <span class="fw-semibold text-secondary">{{ att.test.title }}</span>
+                        </td>
+                        <td class="text-muted small">
+                            {{ att.started_at|date:"M d, Y h:i A" }}
+                        </td>
+                        <td class="small">
+                            {{ att.time_taken_seconds|format_seconds }}
+                        </td>
+                        <td>
+                            <strong class="text-primary">{{ att.score }}</strong> / {{ att.total_possible }}
+                        </td>
+                        <td>
+                            <span class="fw-bold">{{ att.percentage }}%</span>
+                        </td>
+                        <td>
+                            {% if att.status == 'IN_PROGRESS' %}
+                            <span class="badge bg-warning text-dark">In Progress</span>
+                            {% elif att.is_passed %}
+                            <span class="badge bg-success-subtle text-success"><i class="fa-solid fa-check me-1"></i> Passed</span>
+                            {% else %}
+                            <span class="badge bg-danger-subtle text-danger"><i class="fa-solid fa-xmark me-1"></i> Failed</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <a href="{% url 'test_result' att.id %}" class="btn btn-sm btn-outline-primary me-1">
+                                <i class="fa-solid fa-eye me-1"></i> View Answers
+                            </a>
+                            {% if att.is_passed %}
+                            <a href="{% url 'download_certificate' att.id %}" class="btn btn-sm btn-success">
+                                <i class="fa-solid fa-file-pdf"></i>
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-4 text-muted">
+                            No student test submissions recorded yet.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

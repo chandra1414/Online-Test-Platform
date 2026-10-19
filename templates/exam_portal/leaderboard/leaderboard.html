@@ -1,0 +1,230 @@
+{% extends 'exam_portal/base.html' %}
+
+{% block title %}Leaderboard - Online Coding Test Platform{% endblock %}
+
+{% block extra_css %}
+<style>
+    .podium-card {
+        border-radius: 16px;
+        transition: transform 0.2s;
+        position: relative;
+        overflow: hidden;
+    }
+    .podium-card:hover {
+        transform: translateY(-4px);
+    }
+    .gold-podium {
+        background: linear-gradient(145deg, #fffbeb, #fef3c7);
+        border: 2px solid #f59e0b;
+    }
+    .silver-podium {
+        background: linear-gradient(145deg, #f8fafc, #f1f5f9);
+        border: 2px solid #94a3b8;
+    }
+    .bronze-podium {
+        background: linear-gradient(145deg, #fff7ed, #ffedd5);
+        border: 2px solid #ea580c;
+    }
+    .rank-medal-badge {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        font-size: 1.2rem;
+        margin: 0 auto 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- Header Banner -->
+    <div class="text-center mb-5">
+        <div class="d-inline-flex align-items-center justify-content-center bg-warning-subtle text-warning rounded-circle p-3 mb-2">
+            <i class="fa-solid fa-trophy fs-2"></i>
+        </div>
+        <h2 class="fw-bold text-dark">Top Performers Leaderboard</h2>
+        <p class="text-muted">Recognizing top algorithmic & Python talent &bull; Dasara Special Task 2026</p>
+
+        <!-- Test Selector Filter Dropdown -->
+        <div class="row justify-content-center mt-3">
+            <div class="col-md-5">
+                <form method="get" class="d-flex gap-2">
+                    <select name="test_id" class="form-select shadow-sm" onchange="this.form.submit()">
+                        <option value="">🏆 All Tests Combined Leaderboard</option>
+                        {% for t in tests %}
+                        <option value="{{ t.id }}" {% if selected_test.id == t.id %}selected{% endif %}>
+                            {{ t.title }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top 3 Podium (if at least 1 performer exists) -->
+    {% if leaderboard_data %}
+    <div class="row justify-content-center g-4 mb-5">
+        <!-- #2 Silver (Shown Left) -->
+        {% if leaderboard_data|length >= 2 %}
+        {% with p2=leaderboard_data.1 %}
+        <div class="col-md-4 col-sm-6 order-2 order-md-1">
+            <div class="podium-card silver-podium p-4 text-center shadow-sm h-100">
+                <div class="rank-medal-badge bg-secondary text-white shadow-sm">2</div>
+                <div class="rounded-circle bg-white text-secondary mx-auto mb-2 d-flex align-items-center justify-content-center shadow-sm" style="width:54px; height:54px; font-weight:bold; font-size:1.3rem;">
+                    {{ p2.student.display_name|slice:":1"|upper }}
+                </div>
+                <h5 class="fw-bold text-dark mb-1">{{ p2.student.display_name }}</h5>
+                <p class="text-muted small mb-2">{{ p2.student.roll_number }} &bull; {{ p2.student.college }}</p>
+                <div class="badge bg-secondary px-3 py-2 fs-6 fw-bold">
+                    {{ p2.score }} pts ({{ p2.percentage }}%)
+                </div>
+                <div class="small text-muted mt-2">
+                    <i class="fa-regular fa-clock me-1"></i> {{ p2.time_taken_minutes }} mins
+                </div>
+            </div>
+        </div>
+        {% endwith %}
+        {% endif %}
+
+        <!-- #1 Gold (Center, Elevated) -->
+        {% with p1=leaderboard_data.0 %}
+        <div class="col-md-4 col-sm-6 order-1 order-md-2">
+            <div class="podium-card gold-podium p-4 text-center shadow h-100" style="transform: scale(1.05);">
+                <div class="rank-medal-badge bg-warning text-dark shadow-sm">
+                    <i class="fa-solid fa-crown"></i> 1
+                </div>
+                <div class="rounded-circle bg-warning text-white mx-auto mb-2 d-flex align-items-center justify-content-center shadow" style="width:64px; height:64px; font-weight:bold; font-size:1.5rem;">
+                    {{ p1.student.display_name|slice:":1"|upper }}
+                </div>
+                <h4 class="fw-bold text-dark mb-1">{{ p1.student.display_name }}</h4>
+                <p class="text-muted small mb-2">{{ p1.student.roll_number }} &bull; {{ p1.student.college }}</p>
+                <div class="badge bg-warning text-dark px-4 py-2 fs-5 fw-bold shadow-sm">
+                    {{ p1.score }} pts ({{ p1.percentage }}%)
+                </div>
+                <div class="small text-muted mt-2 fw-semibold">
+                    <i class="fa-regular fa-clock me-1"></i> {{ p1.time_taken_minutes }} mins &bull; 🥇 Champion
+                </div>
+            </div>
+        </div>
+        {% endwith %}
+
+        <!-- #3 Bronze (Shown Right) -->
+        {% if leaderboard_data|length >= 3 %}
+        {% with p3=leaderboard_data.2 %}
+        <div class="col-md-4 col-sm-6 order-3 order-md-3">
+            <div class="podium-card bronze-podium p-4 text-center shadow-sm h-100">
+                <div class="rank-medal-badge text-white shadow-sm" style="background:#ea580c;">3</div>
+                <div class="rounded-circle bg-white text-dark mx-auto mb-2 d-flex align-items-center justify-content-center shadow-sm" style="width:54px; height:54px; font-weight:bold; font-size:1.3rem;">
+                    {{ p3.student.display_name|slice:":1"|upper }}
+                </div>
+                <h5 class="fw-bold text-dark mb-1">{{ p3.student.display_name }}</h5>
+                <p class="text-muted small mb-2">{{ p3.student.roll_number }} &bull; {{ p3.student.college }}</p>
+                <div class="badge px-3 py-2 fs-6 fw-bold text-white" style="background:#ea580c;">
+                    {{ p3.score }} pts ({{ p3.percentage }}%)
+                </div>
+                <div class="small text-muted mt-2">
+                    <i class="fa-regular fa-clock me-1"></i> {{ p3.time_taken_minutes }} mins
+                </div>
+            </div>
+        </div>
+        {% endwith %}
+        {% endif %}
+    </div>
+
+    <!-- Official Top 10 Table -->
+    <div class="card card-custom p-4 shadow-sm">
+        <div class="d-flex justify-content-between align-items-center border-bottom pb-3 mb-3">
+            <div>
+                <h5 class="fw-bold text-dark mb-0">
+                    <i class="fa-solid fa-ranking-star text-primary me-2"></i> Official Top 10 Rankings
+                </h5>
+                <small class="text-muted">Tie-breaking criteria: 1. Higher Marks, 2. Lesser Time Taken, 3. Earliest Submission</small>
+            </div>
+            <span class="badge bg-primary-subtle text-primary fw-semibold px-3 py-2">
+                {{ total_participants }} Competitor{{ total_participants|pluralize }}
+            </span>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 80px;" class="text-center">Rank</th>
+                        <th>Student Name & ID</th>
+                        <th>College / Institution</th>
+                        <th>Exam Title</th>
+                        <th>Score</th>
+                        <th>Accuracy</th>
+                        <th>Time Taken</th>
+                        <th class="text-end">Certificate</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in leaderboard_data %}
+                    <tr class="{% if row.rank <= 3 %}fw-semibold{% endif %}">
+                        <td class="text-center">
+                            {% if row.rank == 1 %}
+                            <span class="badge rounded-circle bg-warning text-dark p-2"><i class="fa-solid fa-crown"></i> 1</span>
+                            {% elif row.rank == 2 %}
+                            <span class="badge rounded-circle bg-secondary text-white p-2">2</span>
+                            {% elif row.rank == 3 %}
+                            <span class="badge rounded-circle text-white p-2" style="background:#ea580c;">3</span>
+                            {% else %}
+                            <span class="badge bg-light text-secondary border px-2 py-1">#{{ row.rank }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <strong class="text-dark">{{ row.student.display_name }}</strong>
+                            <small class="d-block text-muted">{{ row.student.roll_number }}</small>
+                        </td>
+                        <td class="text-secondary small">{{ row.student.college }}</td>
+                        <td class="text-dark small">{{ row.attempt.test.title }}</td>
+                        <td>
+                            <span class="fw-bold text-primary fs-6">{{ row.score }}</span>
+                            <small class="text-muted">/ {{ row.attempt.total_possible }}</small>
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="small">{{ row.percentage }}%</span>
+                                <div class="progress flex-grow-1" style="height: 6px; width: 60px;">
+                                    <div class="progress-bar bg-success" style="width: {{ row.percentage }}%"></div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="text-muted small">
+                            <i class="fa-regular fa-clock me-1"></i> {{ row.time_taken_minutes }} mins
+                        </td>
+                        <td class="text-end">
+                            {% if row.attempt.is_passed %}
+                            <a href="{% url 'download_certificate' row.attempt.id %}" class="btn btn-sm btn-outline-success">
+                                <i class="fa-solid fa-file-pdf me-1"></i> Certificate
+                            </a>
+                            {% else %}
+                            <span class="text-muted small">&mdash;</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <div class="card card-custom p-5 text-center shadow-sm">
+        <i class="fa-solid fa-award text-muted fs-1 mb-3"></i>
+        <h4 class="fw-bold text-secondary">No completed attempts recorded yet</h4>
+        <p class="text-muted">Be the first to complete this exam and secure the #1 position on the leaderboard!</p>
+        <div>
+            <a href="{% url 'student_dashboard' %}" class="btn btn-primary-custom">
+                <i class="fa-solid fa-play me-1"></i> Take a Test Now
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

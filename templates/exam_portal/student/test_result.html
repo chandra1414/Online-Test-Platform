@@ -1,0 +1,221 @@
+{% extends 'exam_portal/base.html' %}
+{% load dict_tags %}
+
+{% block title %}Scorecard - {{ test.title }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <!-- Scorecard Summary Header Card -->
+            <div class="card card-custom p-4 mb-4 border-0 shadow-sm" style="background: linear-gradient(135deg, {% if attempt.is_passed %}#065f46, #059669{% else %}#7f1d1d, #dc2626{% endif %}); color: white;">
+                <div class="row align-items-center">
+                    <div class="col-md-7">
+                        <span class="badge bg-white text-dark mb-2 px-3 py-1 fw-bold">Official Examination Scorecard</span>
+                        <h2 class="fw-bold mb-1">{{ test.title }}</h2>
+                        <p class="mb-2 text-white-50">
+                            Candidate: <strong>{{ attempt.student.user.get_full_name|default:attempt.student.user.username }}</strong> ({{ attempt.student.roll_number }}) &bull; {{ attempt.completed_at|date:"M d, Y h:i A" }}
+                        </p>
+                        <div class="d-flex align-items-center gap-2 mt-3">
+                            {% if attempt.is_passed %}
+                            <span class="badge bg-warning text-dark px-3 py-2 fs-6 fw-bold">
+                                <i class="fa-solid fa-medal me-1"></i> Result: PASSED
+                            </span>
+                            <a href="{% url 'download_certificate' attempt.id %}" class="btn btn-light fw-bold px-3 py-2 text-success shadow-sm">
+                                <i class="fa-solid fa-award me-1"></i> Download Verified Certificate (PDF)
+                            </a>
+                            {% else %}
+                            <span class="badge bg-light text-danger px-3 py-2 fs-6 fw-bold">
+                                <i class="fa-solid fa-circle-xmark me-1"></i> Result: NEEDS IMPROVEMENT
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="col-md-5 text-md-end mt-4 mt-md-0">
+                        <div class="d-inline-block bg-white text-dark rounded-4 p-4 shadow text-center" style="min-width: 200px;">
+                            <span class="text-muted small fw-semibold text-uppercase d-block">YOUR SCORE</span>
+                            <div class="display-5 fw-bold {% if attempt.is_passed %}text-success{% else %}text-danger{% endif %} mb-0">
+                                {{ attempt.score }}
+                            </div>
+                            <span class="text-secondary fw-semibold">out of {{ attempt.total_possible }}</span>
+                            <hr class="my-2">
+                            <div class="d-flex justify-content-between small">
+                                <span>Percentage: <strong>{{ attempt.percentage }}%</strong></span>
+                                <span>Rank: <strong class="text-primary">#{{ rank }}</strong></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Metrics Overview -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-3 col-6">
+                    <div class="card card-custom p-3 text-center">
+                        <span class="text-muted small">Leaderboard Standing</span>
+                        <h4 class="fw-bold text-primary mt-1 mb-0">Rank #{{ rank }}</h4>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6">
+                    <div class="card card-custom p-3 text-center">
+                        <span class="text-muted small">Time Taken</span>
+                        <h4 class="fw-bold text-dark mt-1 mb-0">{{ attempt.time_taken_seconds|format_seconds }}</h4>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6">
+                    <div class="card card-custom p-3 text-center">
+                        <span class="text-muted small">Correct Questions</span>
+                        <h4 class="fw-bold text-success mt-1 mb-0">{{ correct_count }} / {{ submissions|length }}</h4>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6">
+                    <div class="card card-custom p-3 text-center">
+                        <span class="text-muted small">Incorrect / Skipped</span>
+                        <h4 class="fw-bold text-danger mt-1 mb-0">{{ wrong_count }} / {{ unanswered_count }}</h4>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detailed Question-by-Question Review -->
+            <div class="card card-custom p-4 mb-4">
+                <div class="d-flex justify-content-between align-items-center border-bottom pb-3 mb-4">
+                    <h5 class="fw-bold text-dark mb-0">
+                        <i class="fa-solid fa-clipboard-check text-primary me-2"></i> Comprehensive Solution Review
+                    </h5>
+                    <a href="{% url 'leaderboard' %}?test_id={{ test.id }}" class="btn btn-outline-warning btn-sm fw-semibold">
+                        <i class="fa-solid fa-trophy me-1"></i> Compare on Leaderboard
+                    </a>
+                </div>
+
+                {% for sub in submissions %}
+                <div class="card mb-4 border {% if sub.is_correct %}border-success-subtle bg-success-subtle bg-opacity-10{% elif sub.marks_awarded > 0 %}border-warning-subtle bg-warning-subtle bg-opacity-10{% else %}border-danger-subtle bg-danger-subtle bg-opacity-10{% endif %} rounded-3 p-3">
+                    <div class="d-flex justify-content-between align-items-start mb-2 border-bottom pb-2">
+                        <div>
+                            <span class="badge bg-secondary me-1">Q{{ forloop.counter }}</span>
+                            {% if sub.question.question_type == 'MCQ' %}
+                            <span class="badge bg-info-subtle text-info border border-info-subtle">MCQ</span>
+                            {% else %}
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle">Python Coding</span>
+                            {% endif %}
+                            <strong class="text-dark ms-2">{{ sub.question.title }}</strong>
+                        </div>
+                        <div>
+                            {% if sub.is_correct %}
+                            <span class="badge bg-success"><i class="fa-solid fa-check me-1"></i> Correct (+{{ sub.marks_awarded }} pts)</span>
+                            {% elif sub.marks_awarded > 0 %}
+                            <span class="badge bg-warning text-dark"><i class="fa-solid fa-circle-half-stroke me-1"></i> Partial ({{ sub.marks_awarded }}/{{ sub.question.marks }} pts)</span>
+                            {% elif sub.marks_awarded < 0 %}
+                            <span class="badge bg-danger"><i class="fa-solid fa-circle-minus me-1"></i> Incorrect ({{ sub.marks_awarded }} pts)</span>
+                            {% else %}
+                            <span class="badge bg-secondary"><i class="fa-solid fa-minus me-1"></i> Unanswered (0 pts)</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Question Prompt -->
+                    <div class="mb-3 text-secondary">{{ sub.question.prompt|linebreaks }}</div>
+
+                    <!-- MCQ Review -->
+                    {% if sub.question.question_type == 'MCQ' %}
+                    <div class="options-review mb-3">
+                        <h6 class="small fw-bold text-muted text-uppercase mb-2">Options & Solution:</h6>
+                        {% for opt in sub.question.options.all %}
+                        <div class="p-2 mb-2 rounded border d-flex align-items-center justify-content-between
+                            {% if opt.is_correct %}bg-success-subtle border-success text-success fw-bold
+                            {% elif sub.selected_option_id == opt.id and not opt.is_correct %}bg-danger-subtle border-danger text-danger fw-bold
+                            {% else %}bg-white text-muted{% endif %}">
+                            <div>
+                                <span class="me-2">
+                                    {% if sub.selected_option_id == opt.id %}
+                                    <i class="fa-solid fa-hand-point-right text-primary me-1"></i> (Your Choice)
+                                    {% endif %}
+                                </span>
+                                {{ opt.text }}
+                            </div>
+                            <div>
+                                {% if opt.is_correct %}
+                                <span class="badge bg-success"><i class="fa-solid fa-check me-1"></i> Correct Answer</span>
+                                {% elif sub.selected_option_id == opt.id %}
+                                <span class="badge bg-danger"><i class="fa-solid fa-xmark me-1"></i> Incorrect</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% if opt.explanation and opt.is_correct %}
+                        <div class="p-2 bg-light rounded text-muted small mt-1 mb-2">
+                            <i class="fa-solid fa-lightbulb text-warning me-1"></i> <strong>Explanation:</strong> {{ opt.explanation }}
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+
+                    <!-- Coding Review -->
+                    {% elif sub.question.question_type == 'CODING' %}
+                    <div class="coding-review mb-3">
+                        <h6 class="small fw-bold text-muted text-uppercase mb-2">Submitted Python Solution:</h6>
+                        {% if sub.submitted_code %}
+                        <pre class="bg-dark text-light p-3 rounded border"><code>{{ sub.submitted_code }}</code></pre>
+                        {% else %}
+                        <div class="alert alert-warning py-2 mb-2 small"><i class="fa-solid fa-triangle-exclamation me-1"></i> No solution submitted.</div>
+                        {% endif %}
+
+                        <!-- Test cases verdict -->
+                        <div class="mt-3 p-3 bg-white rounded border">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="small fw-bold text-dark text-uppercase mb-0">Sandbox Test Cases Result:</h6>
+                                <span class="badge {% if sub.test_cases_passed == sub.total_test_cases and sub.total_test_cases > 0 %}bg-success{% else %}bg-warning text-dark{% endif %}">
+                                    {{ sub.test_cases_passed }} of {{ sub.total_test_cases }} Test Cases Passed
+                                </span>
+                            </div>
+
+                            {% if sub.evaluation_details.details %}
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered align-middle mb-0 small">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Case #</th>
+                                            <th>Type</th>
+                                            <th>Status</th>
+                                            <th>Execution Time</th>
+                                            <th>Result Message</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for tc in sub.evaluation_details.details %}
+                                        <tr>
+                                            <td>Case {{ tc.case_num }}</td>
+                                            <td>{% if tc.is_sample %}<span class="badge bg-info-subtle text-info">Sample</span>{% else %}<span class="badge bg-secondary-subtle text-secondary">Hidden</span>{% endif %}</td>
+                                            <td>
+                                                {% if tc.passed %}
+                                                <span class="badge bg-success">Passed</span>
+                                                {% else %}
+                                                <span class="badge bg-danger">{{ tc.status }}</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ tc.execution_time }}s</td>
+                                            <td class="font-monospace text-muted">{{ tc.message }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="text-center">
+                <a href="{% url 'student_dashboard' %}" class="btn btn-primary-custom px-4 py-2 me-2">
+                    <i class="fa-solid fa-house me-1"></i> Return to Dashboard
+                </a>
+                <a href="{% url 'leaderboard' %}" class="btn btn-outline-secondary px-4 py-2">
+                    <i class="fa-solid fa-trophy me-1"></i> View Global Leaderboard
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

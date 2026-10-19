@@ -1,0 +1,117 @@
+{% extends 'exam_portal/base.html' %}
+
+{% block title %}Instructions - {{ test.title }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card card-custom p-4 shadow-sm border-0 mb-4">
+                <div class="d-flex align-items-center justify-content-between border-bottom pb-3 mb-3">
+                    <div>
+                        <span class="badge bg-primary-subtle text-primary fw-bold text-uppercase">Examination Brief</span>
+                        <h2 class="fw-bold text-dark mt-1 mb-0">{{ test.title }}</h2>
+                    </div>
+                    <span class="badge bg-light text-secondary border px-3 py-2 fs-6">
+                        <i class="fa-regular fa-clock me-1 text-primary"></i> {{ test.duration_minutes }} Minutes
+                    </span>
+                </div>
+
+                <div class="mb-4">
+                    <h6 class="fw-bold text-secondary text-uppercase small">Overview & Syllabus</h6>
+                    <p class="text-secondary">{{ test.description|linebreaks }}</p>
+                </div>
+
+                <div class="row g-3 mb-4">
+                    <div class="col-md-3 col-6">
+                        <div class="p-3 bg-light rounded text-center border">
+                            <span class="text-muted small d-block">Duration</span>
+                            <strong class="fs-5 text-dark">{{ test.duration_minutes }} Mins</strong>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="p-3 bg-light rounded text-center border">
+                            <span class="text-muted small d-block">Total Marks</span>
+                            <strong class="fs-5 text-primary">{{ test.total_marks }}</strong>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="p-3 bg-light rounded text-center border">
+                            <span class="text-muted small d-block">Passing Score</span>
+                            <strong class="fs-5 text-success">{{ test.pass_marks }}</strong>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="p-3 bg-light rounded text-center border">
+                            <span class="text-muted small d-block">Questions</span>
+                            <strong class="fs-5 text-dark">{{ test.question_count }}</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <h5 class="fw-bold text-dark mb-3">
+                    <i class="fa-solid fa-triangle-exclamation text-warning me-2"></i> Important Rules & Instructions
+                </h5>
+                <ul class="list-group list-group-flush mb-4 rounded-3 border">
+                    <li class="list-group-item d-flex align-items-start gap-3 py-3">
+                        <i class="fa-solid fa-stopwatch text-primary fs-5 mt-1"></i>
+                        <div>
+                            <strong>Continuous Timer:</strong> Once started, the countdown timer cannot be paused. When the time expires, your answers will be automatically evaluated and submitted.
+                        </div>
+                    </li>
+                    <li class="list-group-item d-flex align-items-start gap-3 py-3">
+                        <i class="fa-solid fa-shield-virus text-danger fs-5 mt-1"></i>
+                        <div>
+                            <strong>Secure Code Execution Sandbox:</strong> Coding solutions are evaluated in an isolated sandboxed runner. Direct file I/O, process calls, or network requests are prohibited and will trigger an instant security violation.
+                        </div>
+                    </li>
+                    <li class="list-group-item d-flex align-items-start gap-3 py-3">
+                        <i class="fa-solid fa-circle-check text-info fs-5 mt-1"></i>
+                        <div>
+                            <strong>Sample Runs Available:</strong> You can test your code against visible sample test cases as many times as you like before submitting your final exam.
+                        </div>
+                    </li>
+                    <li class="list-group-item d-flex align-items-start gap-3 py-3">
+                        <i class="fa-solid fa-pen-ruler text-warning fs-5 mt-1"></i>
+                        <div>
+                            <strong>Marking Scheme:</strong>
+                            {% if test.negative_marking %}
+                            <span class="text-danger fw-semibold">Negative marking is ENABLED!</span> Each incorrect MCQ deduction is -{{ test.negative_mark_value }} marks.
+                            {% else %}
+                            <span class="text-success fw-semibold">No negative marking</span> for incorrect MCQ answers.
+                            {% endif %}
+                        </div>
+                    </li>
+                    <li class="list-group-item d-flex align-items-start gap-3 py-3">
+                        <i class="fa-solid fa-lock text-secondary fs-5 mt-1"></i>
+                        <div>
+                            <strong>Submission Policy:</strong>
+                            {% if test.allow_multiple_attempts %}
+                            Multiple attempts are permitted for this test.
+                            {% else %}
+                            Only <strong>ONE single submission</strong> is allowed. Once submitted, answers cannot be edited.
+                            {% endif %}
+                        </div>
+                    </li>
+                </ul>
+
+                <div class="d-flex justify-content-between align-items-center pt-2">
+                    <a href="{% url 'student_dashboard' %}" class="btn btn-outline-secondary">
+                        <i class="fa-solid fa-arrow-left me-1"></i> Back to Dashboard
+                    </a>
+
+                    {% if active_attempt %}
+                    <a href="{% url 'take_test' active_attempt.id %}" class="btn btn-warning fw-bold px-4 py-2">
+                        <i class="fa-solid fa-play me-1"></i> Resume Test
+                    </a>
+                    {% else %}
+                    <a href="{% url 'start_test' test.id %}" class="btn btn-primary-custom px-4 py-2 fs-6">
+                        <i class="fa-solid fa-play me-2"></i> I Agree, Start Test Now
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

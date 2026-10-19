@@ -1,0 +1,566 @@
+{% extends 'exam_portal/base.html' %}
+{% load dict_tags %}
+
+{% block title %}Taking Exam: {{ test.title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .test-header-bar {
+        background: #0f172a;
+        color: #ffffff;
+        padding: 12px 20px;
+        position: sticky;
+        top: 0;
+        z-index: 1020;
+        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+    }
+
+    .timer-badge {
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 8px;
+        padding: 6px 16px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 1.25rem;
+        font-weight: 700;
+        letter-spacing: 1px;
+    }
+    .timer-urgent {
+        background: #ef4444 !important;
+        animation: pulse 1s infinite;
+    }
+    @keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.04); }
+    }
+
+    .q-palette-btn {
+        width: 38px;
+        height: 38px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        border-radius: 8px;
+        border: 1px solid #cbd5e1;
+        background: #ffffff;
+        color: #334155;
+        cursor: pointer;
+        transition: all 0.15s ease-in-out;
+    }
+    .q-palette-btn:hover {
+        border-color: #2563eb;
+    }
+    .q-palette-btn.active-q {
+        outline: 3px solid #2563eb;
+        outline-offset: 2px;
+    }
+    .q-palette-btn.answered {
+        background-color: #10b981 !important;
+        color: #ffffff !important;
+        border-color: #059669 !important;
+    }
+    .q-palette-btn.flagged {
+        background-color: #f59e0b !important;
+        color: #ffffff !important;
+        border-color: #d97706 !important;
+    }
+
+    .mcq-option-label {
+        display: flex;
+        align-items: center;
+        padding: 14px 18px;
+        border: 2px solid #e2e8f0;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: all 0.2s;
+        margin-bottom: 12px;
+        background: #ffffff;
+    }
+    .mcq-option-label:hover {
+        border-color: #93c5fd;
+        background-color: #f8fafc;
+    }
+    .mcq-option-input:checked + .mcq-option-label {
+        border-color: #2563eb;
+        background-color: #eff6ff;
+        font-weight: 600;
+    }
+
+    .code-editor-area {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 14px;
+        line-height: 1.5;
+        background-color: #0d1117;
+        color: #f0f6fc;
+        border: 1px solid #30363d;
+        border-radius: 8px;
+        padding: 14px;
+        resize: vertical;
+        tab-size: 4;
+        width: 100%;
+    }
+    .code-editor-area:focus {
+        outline: none;
+        border-color: #58a6ff;
+        box-shadow: 0 0 0 3px rgba(56, 139, 253, 0.25);
+    }
+
+    .terminal-console {
+        background: #090d16;
+        color: #38bdf8;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 13px;
+        border-radius: 8px;
+        padding: 14px;
+        max-height: 250px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+        border: 1px solid #1e293b;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Sticky Exam Status Header -->
+<div class="test-header-bar">
+    <div class="container d-flex flex-wrap align-items-center justify-content-between gap-3">
+        <div class="d-flex align-items-center gap-3">
+            <span class="badge bg-primary px-3 py-2 fw-semibold">
+                <i class="fa-solid fa-graduation-cap me-1"></i> Exam in Progress
+            </span>
+            <h5 class="mb-0 fw-bold text-white d-none d-md-block">{{ test.title }}</h5>
+        </div>
+
+        <div class="d-flex align-items-center gap-4">
+            <div class="text-end">
+                <small class="text-white-50 d-block" style="font-size: 0.75rem;">TIME REMAINING</small>
+                <div id="examTimer" class="timer-badge text-warning">--:--</div>
+            </div>
+
+            <button type="button" class="btn btn-danger fw-bold px-3 py-2" data-bs-toggle="modal" data-bs-target="#submitModal">
+                <i class="fa-solid fa-flag-checkered me-1"></i> Finish & Submit
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="container py-4">
+    <div class="row g-4">
+        <!-- Question Content Pane -->
+        <div class="col-lg-8">
+            <form id="examForm" method="post" action="{% url 'submit_test' attempt.id %}">
+                {% csrf_token %}
+
+                {% for q in questions %}
+                <div class="question-container card card-custom p-4 shadow-sm mb-4" id="q-container-{{ forloop.counter }}" style="{% if not forloop.first %}display:none;{% endif %}">
+                    <!-- Question Header -->
+                    <div class="d-flex justify-content-between align-items-center border-bottom pb-3 mb-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-secondary fs-6">Question {{ forloop.counter }} of {{ questions|length }}</span>
+                            {% if q.question_type == 'MCQ' %}
+                            <span class="badge bg-info-subtle text-info border border-info-subtle"><i class="fa-solid fa-list-check me-1"></i> MCQ</span>
+                            {% else %}
+                            <span class="badge bg-purple-subtle text-primary border border-primary-subtle"><i class="fa-solid fa-code me-1"></i> Python Coding</span>
+                            {% endif %}
+                            <span class="badge bg-light text-muted border">{{ q.get_difficulty_display }}</span>
+                        </div>
+
+                        <div>
+                            <span class="badge bg-success-subtle text-success border border-success-subtle me-1">+{{ q.marks }} Marks</span>
+                            {% if test.negative_marking %}
+                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle">-{{ test.negative_mark_value }} Wrong</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Question Prompt -->
+                    <h5 class="fw-bold text-dark mb-3">{{ q.title }}</h5>
+                    <div class="p-3 bg-light rounded-3 mb-4 text-secondary fs-6" style="line-height: 1.6;">
+                        {{ q.prompt|linebreaks }}
+                    </div>
+
+                    {% with sub=submissions|dict_lookup:q.id %}
+                    <!-- MCQ Interface -->
+                    {% if q.question_type == 'MCQ' %}
+                    <div class="mcq-options-container mb-4">
+                        {% for opt in q.options.all %}
+                        <div>
+                            <input type="radio" class="d-none mcq-option-input" 
+                                   name="mcq_{{ q.id }}" id="opt_{{ opt.id }}" value="{{ opt.id }}"
+                                   {% if sub.selected_option_id == opt.id %}checked{% endif %}
+                                   onchange="saveMcqAnswer({{ q.id }}, {{ opt.id }}, {{ forloop.parentloop.counter }})">
+                            <label class="mcq-option-label" for="opt_{{ opt.id }}">
+                                <span class="badge rounded-circle bg-light text-secondary border me-3 px-2 py-1 fw-bold">
+                                    {{ forloop.counter|stringformat:"c" }}
+                                </span>
+                                <span class="fs-6 text-dark">{{ opt.text }}</span>
+                            </label>
+                        </div>
+                        {% endfor %}
+
+                        <div class="mt-2 text-end">
+                            <button type="button" class="btn btn-sm btn-link text-muted" onclick="clearMcqChoice({{ q.id }}, {{ forloop.counter }})">
+                                <i class="fa-regular fa-trash-can me-1"></i> Clear Selection
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Coding Question Interface -->
+                    {% elif q.question_type == 'CODING' %}
+                    <div class="coding-interface mb-4">
+                        <!-- Sample Input / Output Cards -->
+                        {% if q.sample_input or q.sample_output %}
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-6">
+                                <div class="p-2 bg-light rounded border">
+                                    <small class="fw-bold text-muted d-block mb-1">SAMPLE INPUT</small>
+                                    <pre class="mb-0 bg-white p-2 rounded border small"><code>{{ q.sample_input|default:"(No input required)" }}</code></pre>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="p-2 bg-light rounded border">
+                                    <small class="fw-bold text-muted d-block mb-1">EXPECTED OUTPUT</small>
+                                    <pre class="mb-0 bg-white p-2 rounded border small"><code>{{ q.sample_output }}</code></pre>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Code Editor Toolbar -->
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="small text-muted fw-semibold"><i class="fa-brands fa-python text-warning me-1"></i> Python 3.11 Solution</span>
+                            <small class="text-success" id="save-status-{{ q.id }}"><i class="fa-solid fa-cloud-arrow-up me-1"></i> Ready</small>
+                        </div>
+
+                        <!-- Textarea Code Editor -->
+                        <textarea class="code-editor-area" id="code-editor-{{ q.id }}" name="code_{{ q.id }}" rows="12" spellcheck="false" 
+                                  oninput="onCodeInput({{ q.id }}, {{ forloop.counter }})">{% if sub.submitted_code %}{{ sub.submitted_code }}{% else %}{{ q.starter_code }}{% endif %}</textarea>
+
+                        <!-- Code Action Controls -->
+                        <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mt-3">
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-dark btn-sm fw-semibold" onclick="runSandboxTest({{ q.id }}, false)">
+                                    <i class="fa-solid fa-play text-success me-1"></i> Run Sample Cases
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="toggleCustomInput({{ q.id }})">
+                                    <i class="fa-solid fa-terminal me-1"></i> Custom Input
+                                </button>
+                            </div>
+                            <small class="text-muted"><i class="fa-solid fa-shield-halved me-1"></i> Sandbox isolation active</small>
+                        </div>
+
+                        <!-- Custom Input Box (Toggled) -->
+                        <div class="mt-3 p-3 bg-light rounded border" id="custom-input-box-{{ q.id }}" style="display: none;">
+                            <label class="form-label small fw-bold text-secondary">Custom Input (stdin):</label>
+                            <textarea class="form-control font-monospace small mb-2" id="custom-stdin-{{ q.id }}" rows="2" placeholder="Type test input..."></textarea>
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="runSandboxTest({{ q.id }}, true)">
+                                <i class="fa-solid fa-terminal me-1"></i> Execute with Custom Input
+                            </button>
+                        </div>
+
+                        <!-- Live Sandbox Console Output -->
+                        <div class="mt-3" id="console-wrapper-{{ q.id }}" style="display: none;">
+                            <label class="form-label small fw-bold text-secondary mb-1">
+                                <i class="fa-solid fa-square-poll-vertical me-1"></i> Execution Console:
+                            </label>
+                            <div class="terminal-console" id="terminal-out-{{ q.id }}">Waiting for execution...</div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% endwith %}
+
+                    <!-- Navigation Footnote Controls -->
+                    <div class="d-flex justify-content-between align-items-center border-top pt-3 mt-4">
+                        <button type="button" class="btn btn-outline-secondary" onclick="prevQuestion({{ forloop.counter }})" {% if forloop.first %}disabled{% endif %}>
+                            <i class="fa-solid fa-arrow-left me-1"></i> Previous
+                        </button>
+
+                        <button type="button" class="btn btn-outline-warning" id="flag-btn-{{ forloop.counter }}" onclick="toggleFlagQuestion({{ forloop.counter }})">
+                            <i class="fa-regular fa-bookmark me-1"></i> Mark for Review
+                        </button>
+
+                        {% if not forloop.last %}
+                        <button type="button" class="btn btn-primary-custom" onclick="nextQuestion({{ forloop.counter }})">
+                            Next Question <i class="fa-solid fa-arrow-right ms-1"></i>
+                        </button>
+                        {% else %}
+                        <button type="button" class="btn btn-success fw-bold px-4" data-bs-toggle="modal" data-bs-target="#submitModal">
+                            <i class="fa-solid fa-check me-1"></i> Review & Submit
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </form>
+        </div>
+
+        <!-- Right Side: Question Navigation Palette -->
+        <div class="col-lg-4">
+            <div class="card card-custom p-4 shadow-sm sticky-top" style="top: 80px;">
+                <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">
+                    <i class="fa-solid fa-table-cells-large text-primary me-2"></i> Question Palette
+                </h6>
+
+                <div class="d-flex flex-wrap gap-2 mb-4" id="paletteGrid">
+                    {% for q in questions %}
+                    {% with sub=submissions|dict_lookup:q.id %}
+                    <button type="button" class="q-palette-btn {% if forloop.first %}active-q{% endif %} {% if sub.selected_option_id or sub.submitted_code %}answered{% endif %}" 
+                            id="pal-btn-{{ forloop.counter }}" onclick="jumpToQuestion({{ forloop.counter }})">
+                        {{ forloop.counter }}
+                    </button>
+                    {% endwith %}
+                    {% endfor %}
+                </div>
+
+                <!-- Palette Legend -->
+                <div class="p-3 bg-light rounded-3 small">
+                    <h6 class="fw-bold text-secondary mb-2" style="font-size: 0.8rem;">LEGEND</h6>
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <span class="d-inline-block rounded" style="width:14px; height:14px; background:#10b981;"></span>
+                        <span class="text-muted">Answered</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <span class="d-inline-block rounded" style="width:14px; height:14px; background:#f59e0b;"></span>
+                        <span class="text-muted">Marked for Review</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="d-inline-block rounded border" style="width:14px; height:14px; background:#ffffff;"></span>
+                        <span class="text-muted">Unanswered</span>
+                    </div>
+                </div>
+
+                <!-- Student Info Reminder -->
+                <div class="mt-4 pt-3 border-top text-center text-muted small">
+                    Candidate: <strong>{{ request.user.username }}</strong><br/>
+                    Exam ID: <span class="font-monospace">{{ attempt.id|stringformat:"s"|slice:":8" }}...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Submit Confirmation Modal -->
+<div class="modal fade" id="submitModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title fw-bold text-dark"><i class="fa-solid fa-circle-question text-primary me-2"></i> Submit Examination</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body py-4 text-center">
+                <i class="fa-solid fa-paper-plane text-primary fs-1 mb-3"></i>
+                <h5 class="fw-bold">Are you ready to submit your test?</h5>
+                <p class="text-muted mb-0">Once submitted, your answers will be automatically evaluated, coding test cases will be compiled in the sandbox, and your final score will be published.</p>
+            </div>
+            <div class="modal-footer bg-light justify-content-between">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Continue Exam</button>
+                <button type="button" class="btn btn-success fw-bold px-4" onclick="document.getElementById('examForm').submit();">
+                    <i class="fa-solid fa-check-circle me-1"></i> Yes, Submit Exam
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const TOTAL_QUESTIONS = {{ questions|length }};
+    let currentQ = 1;
+    let remainingSeconds = {{ remaining_seconds }};
+    const attemptId = "{{ attempt.id }}";
+    const saveUrl = "{% url 'save_answer_ajax' attempt.id %}";
+    const runCodeUrl = "{% url 'run_code_ajax' %}";
+
+    // 1. Countdown Timer
+    function updateTimerDisplay() {
+        const timerEl = document.getElementById('examTimer');
+        if (remainingSeconds <= 0) {
+            timerEl.innerText = "00:00";
+            timerEl.classList.add('timer-urgent');
+            document.getElementById('examForm').submit();
+            return;
+        }
+
+        const mins = Math.floor(remainingSeconds / 60);
+        const secs = remainingSeconds % 60;
+        timerEl.innerText = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+
+        if (remainingSeconds < 300) {
+            timerEl.classList.add('timer-urgent');
+        }
+
+        remainingSeconds--;
+    }
+    setInterval(updateTimerDisplay, 1000);
+    updateTimerDisplay();
+
+    // 2. Question Navigation
+    function showQuestion(qNum) {
+        for (let i = 1; i <= TOTAL_QUESTIONS; i++) {
+            const container = document.getElementById(`q-container-${i}`);
+            const palBtn = document.getElementById(`pal-btn-${i}`);
+            if (container) container.style.display = (i === qNum) ? 'block' : 'none';
+            if (palBtn) {
+                if (i === qNum) palBtn.classList.add('active-q');
+                else palBtn.classList.remove('active-q');
+            }
+        }
+        currentQ = qNum;
+        window.scrollTo({ top: 60, behavior: 'smooth' });
+    }
+
+    function nextQuestion(curr) {
+        if (curr < TOTAL_QUESTIONS) showQuestion(curr + 1);
+    }
+
+    function prevQuestion(curr) {
+        if (curr > 1) showQuestion(curr - 1);
+    }
+
+    function jumpToQuestion(qNum) {
+        showQuestion(qNum);
+    }
+
+    function toggleFlagQuestion(qNum) {
+        const palBtn = document.getElementById(`pal-btn-${qNum}`);
+        const flagBtn = document.getElementById(`flag-btn-${qNum}`);
+        if (palBtn.classList.contains('flagged')) {
+            palBtn.classList.remove('flagged');
+            flagBtn.classList.remove('btn-warning');
+            flagBtn.classList.add('btn-outline-warning');
+            flagBtn.innerHTML = '<i class="fa-regular fa-bookmark me-1"></i> Mark for Review';
+        } else {
+            palBtn.classList.add('flagged');
+            flagBtn.classList.remove('btn-outline-warning');
+            flagBtn.classList.add('btn-warning');
+            flagBtn.innerHTML = '<i class="fa-solid fa-bookmark me-1"></i> Marked for Review';
+        }
+    }
+
+    // 3. Save MCQ Answer AJAX
+    function saveMcqAnswer(questionId, optionId, qNum) {
+        fetch(saveUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({ question_id: questionId, option_id: optionId })
+        }).then(r => r.json()).then(data => {
+            if (data.success) {
+                const palBtn = document.getElementById(`pal-btn-${qNum}`);
+                if (palBtn && !palBtn.classList.contains('flagged')) palBtn.classList.add('answered');
+            }
+        });
+    }
+
+    function clearMcqChoice(questionId, qNum) {
+        const inputs = document.querySelectorAll(`input[name="mcq_${questionId}"]`);
+        inputs.forEach(inp => inp.checked = false);
+
+        fetch(saveUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({ question_id: questionId, option_id: null })
+        }).then(r => r.json()).then(data => {
+            const palBtn = document.getElementById(`pal-btn-${qNum}`);
+            if (palBtn) palBtn.classList.remove('answered');
+        });
+    }
+
+    // 4. Save Code debounce
+    let codeDebounceTimer = null;
+    function onCodeInput(questionId, qNum) {
+        const statusEl = document.getElementById(`save-status-${questionId}`);
+        if (statusEl) statusEl.innerHTML = '<i class="fa-solid fa-pencil text-warning me-1"></i> Editing...';
+
+        clearTimeout(codeDebounceTimer);
+        codeDebounceTimer = setTimeout(() => {
+            const codeVal = document.getElementById(`code-editor-${questionId}`).value;
+            fetch(saveUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({ question_id: questionId, code: codeVal })
+            }).then(r => r.json()).then(data => {
+                if (data.success) {
+                    if (statusEl) statusEl.innerHTML = `<i class="fa-solid fa-check text-success me-1"></i> Saved ${data.saved_at}`;
+                    const palBtn = document.getElementById(`pal-btn-${qNum}`);
+                    if (palBtn && codeVal.trim().length > 0 && !palBtn.classList.contains('flagged')) {
+                        palBtn.classList.add('answered');
+                    }
+                }
+            });
+        }, 1000);
+    }
+
+    // 5. Sandboxed Code Execution AJAX
+    function toggleCustomInput(questionId) {
+        const box = document.getElementById(`custom-input-box-${questionId}`);
+        box.style.display = (box.style.display === 'none') ? 'block' : 'none';
+    }
+
+    function runSandboxTest(questionId, isCustom) {
+        const code = document.getElementById(`code-editor-${questionId}`).value;
+        const consoleWrapper = document.getElementById(`console-wrapper-${questionId}`);
+        const termOut = document.getElementById(`terminal-out-${questionId}`);
+
+        consoleWrapper.style.display = 'block';
+        termOut.innerHTML = '⚡ Compiling & executing in isolated sandbox... Please wait.';
+
+        let payload = { question_id: questionId, code: code };
+        if (isCustom) {
+            payload.custom_input = document.getElementById(`custom-stdin-${questionId}`).value;
+        }
+
+        fetch(runCodeUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success) {
+                termOut.innerHTML = `<span style="color:#ef4444;">Error: ${data.error}</span>`;
+                return;
+            }
+
+            if (data.is_custom) {
+                let badge = (data.status === 'SUCCESS') ? '<span class="badge bg-success">Success</span>' : `<span class="badge bg-danger">${data.status}</span>`;
+                termOut.innerHTML = `[Process Result]: ${badge} (${data.execution_time}s)\n` +
+                                    (data.output ? `\n[stdout]:\n${data.output}` : '') +
+                                    (data.error ? `\n[stderr/trace]:\n${data.error}` : '');
+            } else {
+                const evalData = data.evaluation;
+                let html = `Summary: ${evalData.cases_passed} / ${evalData.total_cases} sample cases passed (${evalData.percentage}%)\n`;
+                html += '------------------------------------------------------------\n';
+                evalData.details.forEach(tc => {
+                    let stColor = tc.passed ? '#10b981' : '#ef4444';
+                    html += `Test Case #${tc.case_num}: <span style="color:${stColor}; font-weight:bold;">${tc.message}</span> (${tc.execution_time}s)\n`;
+                    html += `  Input:    ${tc.sample_input}\n`;
+                    html += `  Expected: ${tc.expected_output}\n`;
+                    html += `  Actual:   ${tc.actual_output}\n\n`;
+                });
+                if (evalData.error_summary) {
+                    html += `<span style="color:#ef4444;">Details: ${evalData.error_summary}</span>\n`;
+                }
+                termOut.innerHTML = html;
+            }
+        })
+        .catch(err => {
+            termOut.innerHTML = `<span style="color:#ef4444;">Execution failed: ${err}</span>`;
+        });
+    }
+</script>
+{% endblock %}

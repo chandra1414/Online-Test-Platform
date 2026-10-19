@@ -1,0 +1,92 @@
+{% extends 'exam_portal/base.html' %}
+
+{% block title %}Manage Tests - Admin Portal{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <h3 class="fw-bold text-dark mb-1">
+                <i class="fa-solid fa-list-check text-primary me-2"></i> Test Management
+            </h3>
+            <p class="text-muted small mb-0">Create, edit, configure timers, negative marking, and question sets</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'admin_test_create' %}" class="btn btn-primary-custom">
+                <i class="fa-solid fa-plus me-1"></i> Create New Test
+            </a>
+            <a href="{% url 'admin_dashboard' %}" class="btn btn-outline-secondary">
+                <i class="fa-solid fa-arrow-left me-1"></i> Dashboard
+            </a>
+        </div>
+    </div>
+
+    <div class="card card-custom p-4 shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Title</th>
+                        <th>Duration</th>
+                        <th>Questions</th>
+                        <th>Total Marks</th>
+                        <th>Passing Marks</th>
+                        <th>Negative Marking</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for test in tests %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'admin_test_detail' test.id %}" class="fw-bold text-dark text-decoration-none">
+                                {{ test.title }}
+                            </a>
+                        </td>
+                        <td>{{ test.duration_minutes }} mins</td>
+                        <td>
+                            <span class="badge bg-light text-dark border">{{ test.question_count }} Qs</span>
+                            <small class="text-muted">({{ test.mcq_count }} MCQ, {{ test.coding_count }} Coding)</small>
+                        </td>
+                        <td class="fw-semibold">{{ test.total_marks }}</td>
+                        <td>{{ test.pass_marks }}</td>
+                        <td>
+                            {% if test.negative_marking %}
+                            <span class="badge bg-danger-subtle text-danger">-{{ test.negative_mark_value }}</span>
+                            {% else %}
+                            <span class="badge bg-secondary-subtle text-secondary">None</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if test.is_active %}
+                            <span class="badge bg-success-subtle text-success"><i class="fa-solid fa-circle-check me-1"></i> Active</span>
+                            {% else %}
+                            <span class="badge bg-warning-subtle text-warning"><i class="fa-solid fa-pause me-1"></i> Draft</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <a href="{% url 'admin_test_detail' test.id %}" class="btn btn-sm btn-outline-primary me-1" title="Manage Questions">
+                                <i class="fa-solid fa-gear me-1"></i> Questions
+                            </a>
+                            <a href="{% url 'admin_test_edit' test.id %}" class="btn btn-sm btn-outline-secondary me-1" title="Edit Parameters">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                            </a>
+                            <a href="{% url 'admin_test_delete' test.id %}" class="btn btn-sm btn-outline-danger" title="Delete">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-4 text-muted">
+                            No tests created yet. Click "Create New Test" above to start!
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

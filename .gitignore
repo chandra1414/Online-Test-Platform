@@ -1,0 +1,32 @@
+# Python & Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Django
+*.log
+local_settings.py
+db.sqlite3-journal
+media/
+
+# Virtual Environments
+venv/
+env/
+ENV/
+.venv/
+
+# Environment Variables
+.env
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
