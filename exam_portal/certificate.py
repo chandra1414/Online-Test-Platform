@@ -144,7 +144,7 @@ def generate_certificate_pdf(attempt, rank=1):
 
     story = []
     story.append(Spacer(1, 10))
-    story.append(Paragraph("ONLINE CODING TEST PLATFORM", ParagraphStyle(
+    story.append(Paragraph("CODEGEN ASSESSMENT & CODING PLATFORM", ParagraphStyle(
         'OrgHeader', fontName='Helvetica-Bold', fontSize=10, leading=12,
         textColor=colors.HexColor('#2563EB'), alignment=1, spaceAfter=8
     )))

@@ -1,6 +1,6 @@
-# 🏆 Online Coding Test Platform (Dasara Special Task 2026)
+# 🏆 CodeGen &mdash; Online Coding & Assessment Platform (Dasara Special Task 2026)
 
-An enterprise-grade, full-stack **Online Coding Test Platform** built with **Python**, **Django**, **MySQL / SQLite**, **HTML5/Bootstrap 5**, and **JavaScript**.
+**CodeGen** is an enterprise-grade, full-stack **Coding & Examination Platform** built with **Python**, **Django**, **MySQL / SQLite**, **HTML5/Bootstrap 5**, and **JavaScript**.
 
 The platform enables administrators to create timed Python exams comprising multiple-choice questions (MCQs) and algorithmic coding problems, while students attend timed tests, run code against sample inputs in real time, receive automatic scoring via an **isolated sandboxed execution runner**, view detailed scorecards with question-by-question explanations, download official certificates, and compete on a live leaderboard.
 
