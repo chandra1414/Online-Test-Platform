@@ -1,13 +1,21 @@
 import os
+import shutil
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-(2n19k5xu^2#ib!t3-v&lan=459#256pu_o9vqzj!7y@^lw5*i-2026')
 
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'True').lower() in ('true', '1')
 
 ALLOWED_HOSTS = ['*']
+
+CSRF_TRUSTED_ORIGINS = [
+    'https://*.vercel.app',
+    'https://*.loca.lt',
+    'http://127.0.0.1',
+    'http://localhost',
+]
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -15,12 +23,14 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    'whitenoise.runserver_nostatic',
     'django.contrib.staticfiles',
     'exam_portal',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -48,7 +58,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'coding_platform.wsgi.application'
 
-# Database Setup: Supports MySQL as required by PDF, with automated fallback to SQLite
+# Database Setup: Supports MySQL and SQLite (with Vercel /tmp migration fallback)
 USE_MYSQL = os.environ.get('USE_MYSQL', 'False').lower() in ('true', '1', 't')
 DB_NAME = os.environ.get('DB_NAME', 'coding_test_db')
 DB_USER = os.environ.get('DB_USER', 'root')
@@ -72,10 +82,23 @@ if USE_MYSQL:
         }
     }
 else:
+    # If running on serverless Vercel, copy SQLite to writable /tmp
+    if os.environ.get('VERCEL'):
+        tmp_db = '/tmp/db.sqlite3'
+        orig_db = BASE_DIR / 'db.sqlite3'
+        if not os.path.exists(tmp_db) and os.path.exists(orig_db):
+            try:
+                shutil.copyfile(orig_db, tmp_db)
+            except Exception:
+                pass
+        db_path = tmp_db if os.path.exists(tmp_db) else BASE_DIR / 'db.sqlite3'
+    else:
+        db_path = BASE_DIR / 'db.sqlite3'
+
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
+            'NAME': db_path,
         }
     }
 
@@ -94,6 +117,7 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
